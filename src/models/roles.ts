@@ -1,6 +1,7 @@
 import mongoose, { Schema, Types } from "mongoose";
+import type { IPermission } from "../types/role.types.js";
 
-const roleSchema = new Schema({
+const roleSchema = new Schema<IPermission>({
   roleId: {
     type: String,
     required :true,
@@ -16,7 +17,7 @@ const roleSchema = new Schema({
       permissionId: {
         type:String,
         required: true, 
-        // ref:Permissions
+        // ref:"Permissions"
       },
       status: {
         type: String,

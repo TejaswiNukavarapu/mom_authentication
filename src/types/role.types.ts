@@ -1,7 +1,8 @@
-import type { Types } from "mongoose";
+import type { Document, Schema, Types } from "mongoose";
+import type { RoleInput } from "../schemas/role.schema.js";
 
-export interface IPermission {
-  permissionId: Types.ObjectId;
+export interface IPermission extends Document, RoleInput {
+  permissionId: string;
   status:"Read"|"Write"|"None";
 }
 

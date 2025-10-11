@@ -18,6 +18,6 @@ const PermissionsSchema = new Schema<permissions>({
 
 })
 
-const permissional = mongoose.model("Dashboard permissions", PermissionsSchema)
+const permissional = mongoose.model("Permissions", PermissionsSchema)
 
 export default permissional
