@@ -7,7 +7,12 @@ export const user = z.object({
     photo:z.string().optional() ,
     refreshToken:z.string().optional() , 
     password:z.string().optional() ,
-    isActive:z.boolean(),
+    // isActive:z.string(),
+    Status:z.enum(['Active','InActive']),
+    clusterId:z.string().optional(),
+    storeId:z.string().optional(),
+    roleId:z.string().optional(),
+    //
     passwordResetToken:z.number().optional(),
     // passwordResetTokenExpires:z.string().optional(),
     // passwordChangedAt:z.string()

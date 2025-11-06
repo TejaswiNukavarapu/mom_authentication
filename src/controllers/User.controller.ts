@@ -7,9 +7,12 @@ import ApiResponse from "../utils/ApiResponse.js";
 import { client } from "../config/RedisClient.js";
 import transportMail from "../config/nodemailer.js";
 import { fa } from "zod/locales";
-import bcrypt from "bcrypt";
+import bcrypt from 'bcrypt';
 import jwt from "jsonwebtoken";
 // import { setMaxListeners } from "nodemailer/lib/xoauth2/index.js";
+import crypto from "crypto";
+import transporter from "../config/nodemailer.js";
+
 
 class UserController {
   getUsers = TryCatch(async (req, res) => {
@@ -106,6 +109,7 @@ class UserController {
 
   SignIn = TryCatch(async (req, res) => {
     const { email, password } = req.body;
+    console.log("req body", req.body);
 
     if (!email || !password) {
       throw new ApiError("Email or Password missing", 400, false);
@@ -124,7 +128,7 @@ class UserController {
 
     const checkPassword = await bcrypt.compare(password, findUser.password);
 
-    const isMatch = await bcrypt.compare(password, findUser.password);
+    // const isMatch = await bcrypt.compare(password, findUser.password);
     
     // if(password!=findUser.password)
     // {
@@ -132,9 +136,9 @@ class UserController {
 
     // }
 
-    console.log("checkPassword", isMatch);
+    console.log("checkPassword", checkPassword);
 
-    if (!isMatch) {
+    if (!checkPassword) {
       throw new ApiError("User password not match", 400, false);
     }
 
@@ -194,14 +198,20 @@ class UserController {
     }
 
     if (Number(parsedOtp) == Number(otp)) {
-      const token = jwt.sign({ id: findUser._id }, process.env.JWT_SECRET, {
+       const payload = {
+        id: findUser._id,
+        roleId: findUser.roleId,
+        clusterId: findUser.clusterId,
+        storeId: findUser.storeId,
+      };
+      const token = jwt.sign({ payload }, process.env.JWT_SECRET, {
         expiresIn: "12h",
       });
 
       const rediesTocken = await client.setEx(
         `user:${token}`,
         43200,
-        JSON.stringify({ id: findUser._id })
+        JSON.stringify({ payload})
       );
 
       console.log("This is token", rediesTocken);
@@ -210,6 +220,87 @@ class UserController {
     }
 
     throw new ApiError("Invalid OTP or email", 400, false);
+  });
+
+
+
+  CreateRolemember = TryCatch(async (req, res) => {
+    console.log("Incoming request body:", req.body);
+    // console.log("Uploaded file:", req.file);
+
+    const parse = user.safeParse(req.body);
+    if (!parse.success) {
+      console.log("Validation Error:", parse.error);
+      throw new ApiError("Validation failed", 401, false);
+    }
+
+    // Generate random password
+    const length = 7;
+    const password = crypto.randomBytes(length).toString("base64").slice(0, length);
+
+    const hashPassword = await bcrypt.hash(password, 10);
+    console.log("Generated hashed password:", hashPassword);
+
+    // Save user data to DB
+    const newRolemember = await Users.create({
+      ...parse.data,
+      password: hashPassword,
+    });
+
+    // Prepare onboarding email
+    const onBoardingUrl = `http://localhost:5173/Addimage`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Onboarding Details</title>
+        <style>
+          body { font-family: Arial, sans-serif; background-color: #f1f3f4; margin: 0; padding: 0; }
+          .container { width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); text-align: center; }
+          h2 { color: #202124; font-size: 24px; margin-bottom: 20px; }
+          p { color: #202124; font-size: 16px; line-height: 1.6; }
+          .pswd { font-size: 16px; color: #007bff; font-weight: bold; }
+          .reset-link { display: inline-block; color: white; padding: 12px 25px; font-size: 16px; text-decoration: none; border-radius: 5px; margin: 20px 0; background-color: #007bff; }
+          .footer { margin-top: 30px; color: #5f6368; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h2>Welcome to mompharmacy</h2>
+          <p>Your onboarding process has started. Use the password below to log in:</p>
+          <p class="pswd">${password}</p>
+          <a class="reset-link" href="${onBoardingUrl}">Access Portal</a>
+          <p class="footer">Please change your password after logging in for security.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+
+    console.log("onBoardingUrl:", onBoardingUrl);
+
+    const mailOptions = {
+      from: "HR Manager <hr@mompharmacy.com>",
+      to: parse.data.email,
+      subject: "Onboarding Process - Mompharmacy",
+      html, 
+    };
+
+    // Send email
+    transporter.sendMail(mailOptions, (err, info) => {
+      if (err) {
+        console.error("Error sending onboarding email:", err);
+      } else {
+        console.log("Onboarding email sent:", info.response);
+      }
+    });
+
+    res.status(201).json(
+      new ApiResponse("Rolemember created and email sent successfully", 201, newRolemember)
+    );
   });
 }
 
