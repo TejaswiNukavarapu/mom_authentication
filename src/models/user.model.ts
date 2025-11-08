@@ -5,19 +5,19 @@ import crypto from 'crypto'
 const UserSchema = new Schema<IUser>({
     name:{
         type:String , 
-        required:true
+        //:true
     } , 
     email:{
         type:String , 
-        required:true ,
+        //:true ,
     } , 
     contactNumber:{
         type:String , 
-        required:true 
+        //:true 
     } , 
     photo:{
         type:String , 
-        required:true
+        //:true
     } , 
     clusterId:{
         type:Schema.Types.ObjectId , 
@@ -34,8 +34,13 @@ const UserSchema = new Schema<IUser>({
     password:{
         type:String , 
     },
-    isActive:{
-        type:Boolean ,
+    // isActive:{
+    //     type:String, 
+    // },
+    Status:{
+        type:String,
+        enum:['Active','InActive'],
+        //:true
     },
 
     //  passwordChangedAt: Date,
